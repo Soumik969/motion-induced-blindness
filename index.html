@@ -104,7 +104,7 @@
                 </div>
                 <div class="flex gap-4">
                     <span class="text-blue-500 font-bold">03.</span>
-                    <p>There are <strong>8 trials</strong> of 20 seconds each.</p>
+                    <p>There are <strong>8 trials</strong> of 10 seconds each.</p>
                 </div>
             </div>
 
@@ -148,7 +148,7 @@
 
                     <div class="glass-panel p-8 text-center" id="timerCard">
                         <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Trial Remaining</label>
-                        <div id="countdown" class="text-6xl font-black font-mono text-blue-500">20.0</div>
+                        <div id="countdown" class="text-6xl font-black font-mono text-blue-500">10.0</div>
                         <div class="mt-4 flex flex-col gap-3">
                             <div class="text-xs text-slate-500 font-bold uppercase animate-pulse" id="statusIndicator">
                                 Recording...
@@ -190,7 +190,7 @@
                     </svg>
                 </div>
                 <h2 class="text-3xl font-bold">Protocol Complete</h2>
-                <p class="text-slate-400 mt-2">Data ready for upload.</p>
+                <p class="text-slate-400 mt-2">Data averaged and ready for upload.</p>
             </div>
 
             <div class="grid grid-cols-1 gap-3 mb-8 overflow-y-auto max-h-[300px] pr-2" id="finalLog"></div>
@@ -221,7 +221,7 @@
         const canvasOverlay = document.getElementById('canvasOverlay');
         const intervalDisp = document.getElementById('intervalDisplay');
         
-        const TRIAL_TIME = 20000; // 20 Seconds per trial
+        const TRIAL_TIME = 10000; // 10 Seconds per trial
 
         const PRESETS_RAW = [
             { name: "Yellow Standard", maskColor: '#3b82f6', targetColor: '#fbbf24', vibration: false, contrast: 1.0 },
@@ -471,19 +471,20 @@
             const log = document.getElementById('finalLog');
             log.innerHTML = sessionData.map(data => {
                 const total = data.events.reduce((a,b) => a + b.duration, 0);
+                // Calculate Average for display
+                const avg = data.events.length > 0 ? (total / data.events.length) : 0;
+                
                 return `
                     <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
                         <div class="flex justify-between items-center mb-2">
                             <div>
                                 <h4 class="font-bold text-sm text-white">${data.presetName}</h4>
-                                <p class="text-[10px] text-blue-400 uppercase font-bold">${data.targetCount} Targets • ${data.events.length} Intervals</p>
+                                <p class="text-[10px] text-blue-400 uppercase font-bold">${data.targetCount} Targets • ${data.events.length} Events</p>
                             </div>
                             <div class="text-right">
-                                <span class="text-xl font-mono font-bold text-white">${total.toFixed(2)}s</span>
+                                <span class="block text-xl font-mono font-bold text-white">${avg.toFixed(2)}s</span>
+                                <span class="text-[9px] uppercase text-slate-500 font-bold">AVG DURATION</span>
                             </div>
-                        </div>
-                        <div class="text-[9px] text-slate-500 font-mono grid grid-cols-2 gap-x-4">
-                            ${data.events.map((e, i) => `<span>#${i+1}: ${e.duration.toFixed(3)}s</span>`).join('')}
                         </div>
                     </div>
                 `;
@@ -495,25 +496,22 @@
             btn.innerText = "Uploading Data...";
             btn.disabled = true;
 
-            // 1. FLATTEN THE DATA
-            // Convert sessionData (Array of Stages) into Flat List (Array of Events)
-            let flatPayload = [];
-            
-            sessionData.forEach(stage => {
-                if (stage.events.length === 0) {
-                    // Optional: Log trials with 0 events? 
-                    // Let's skip them to keep data clean, or add a 0 duration entry if you prefer.
-                } else {
-                    stage.events.forEach(ev => {
-                        flatPayload.push({
-                            name: participantName,
-                            preset: stage.presetName,
-                            qty: stage.targetCount,
-                            color: stage.color,
-                            duration: ev.duration.toFixed(3) // Raw duration
-                        });
-                    });
-                }
+            // --- DATA CONSOLIDATION LOGIC (AVERAGING) ---
+            let flatPayload = sessionData.map(stage => {
+                const totalDuration = stage.events.reduce((acc, ev) => acc + ev.duration, 0);
+                const count = stage.events.length;
+                
+                // --- THE KEY CHANGE: CALCULATE AVERAGE ---
+                const avgDuration = count > 0 ? (totalDuration / count) : 0;
+
+                return {
+                    name: participantName,
+                    preset: stage.presetName,
+                    qty: stage.targetCount,
+                    color: stage.color, 
+                    duration: avgDuration.toFixed(3), // Sending AVERAGE to the column
+                    freq: count
+                };
             });
 
             if (flatPayload.length === 0) {
