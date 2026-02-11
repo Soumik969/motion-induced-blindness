@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>MIB Research Suite - Automated Protocol</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -14,6 +14,8 @@
             color: #f1f5f9;
             overflow-x: hidden;
             scroll-behavior: smooth;
+            /* Prevent pulling to refresh on mobile */
+            overscroll-behavior-y: contain;
         }
 
         .stage-container {
@@ -38,6 +40,8 @@
             background: black;
             cursor: none;
             box-shadow: 0 0 40px rgba(59, 130, 246, 0.15);
+            max-width: 100%;
+            height: auto;
         }
 
         .spacebar-active {
@@ -72,6 +76,15 @@
 
         .fade-in { animation: fadeIn 0.5s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Disable text selection on the button for better mobile feel */
+        #spaceBtn {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+        }
     </style>
 </head>
 <body class="antialiased">
@@ -100,7 +113,7 @@
                 </div>
                 <div class="flex gap-4">
                     <span class="text-blue-500 font-bold">02.</span>
-                    <p>Hold the <strong>Spacebar</strong> (or button) when a dot disappears. Release when it reappears.</p>
+                    <p>Hold the <strong>Spacebar</strong> (or the red button) when a dot disappears. Release when it reappears.</p>
                 </div>
                 <div class="flex gap-4">
                     <span class="text-blue-500 font-bold">03.</span>
@@ -365,10 +378,24 @@
             document.getElementById('liveTime').innerText = total.toFixed(2) + 's';
         }
 
+        // --- KEYBOARD LISTENERS ---
         window.addEventListener('keydown', (e) => { if(e.code === 'Space') { e.preventDefault(); startBlindness(); }});
         window.addEventListener('keyup', (e) => { if(e.code === 'Space') { e.preventDefault(); stopBlindness(); }});
+
+        // --- UPDATED: MOBILE & DESKTOP CLICK LISTENERS ---
+        // PC Mouse
         spaceBtn.addEventListener('mousedown', (e) => { e.preventDefault(); startBlindness(); });
         window.addEventListener('mouseup', stopBlindness);
+
+        // Mobile Touch
+        spaceBtn.addEventListener('touchstart', (e) => { 
+            e.preventDefault(); // Prevents simulated mouse clicks and scrolling
+            startBlindness(); 
+        }, { passive: false });
+        
+        window.addEventListener('touchend', (e) => {
+            stopBlindness();
+        });
 
         function initBgDots() {
             bgDots = [];
